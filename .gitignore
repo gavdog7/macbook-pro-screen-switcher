@@ -1,3 +1,5 @@
 .DS_Store
-*.app
 build/
+
+# Allow our app bundle to be tracked
+!ScreenSwitcher.app/

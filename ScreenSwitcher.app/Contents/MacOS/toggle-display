@@ -1,0 +1,91 @@
+#!/bin/bash
+set -uo pipefail
+
+# Resolve the directory this script lives in (inside the .app bundle)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BUNDLE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Configuration: case-insensitive substring matches for display identification.
+# Override via environment variables if your display names differ.
+BUILTIN_MATCH="${BUILTIN_DISPLAY:-built.in}"  # regex: matches "built-in" or "built in"
+EXTERNAL_MATCH="${EXTERNAL_DISPLAY:-}"  # empty = match any non-built-in display
+
+# Locate displayplacer — check PATH, then common Homebrew locations
+DP=$(command -v displayplacer 2>/dev/null) \
+    || DP="/opt/homebrew/bin/displayplacer" # Apple Silicon
+if [[ ! -x "$DP" ]]; then
+    DP="/usr/local/bin/displayplacer"  # Intel Mac
+fi
+if [[ ! -x "$DP" ]]; then
+    osascript -e 'display notification "displayplacer not found. Install: brew install displayplacer" with title "Screen Switcher"'
+    exit 1
+fi
+
+# Capture displayplacer list output
+DP_OUTPUT=$("$DP" list 2>&1)
+
+# --- Parse display blocks ---
+# For each display, extract: persistent ID, type, and current mode number.
+BUILTIN_ID=""
+BUILTIN_MODE=""
+EXTERNAL_ID=""
+EXTERNAL_MODE=""
+
+current_id=""
+
+while IFS= read -r line; do
+    if [[ "$line" =~ ^Persistent\ screen\ id:\ (.+)$ ]]; then
+        current_id="${BASH_REMATCH[1]}"
+    elif [[ "$line" =~ ^Type:\ (.+)$ ]]; then
+        local_type="${BASH_REMATCH[1]}"
+        if echo "$local_type" | grep -qiE "$BUILTIN_MATCH"; then
+            BUILTIN_ID="$current_id"
+        elif [[ -z "$EXTERNAL_MATCH" ]] || echo "$local_type" | grep -qiE "$EXTERNAL_MATCH"; then
+            EXTERNAL_ID="$current_id"
+        fi
+    elif [[ "$line" =~ mode\ ([0-9]+):.*\<--\ current\ mode ]]; then
+        if [[ "$current_id" == "$BUILTIN_ID" ]]; then
+            BUILTIN_MODE="${BASH_REMATCH[1]}"
+        elif [[ "$current_id" == "$EXTERNAL_ID" ]]; then
+            EXTERNAL_MODE="${BASH_REMATCH[1]}"
+        fi
+    fi
+done <<< "$DP_OUTPUT"
+
+# --- Validate displays ---
+if [[ -z "$BUILTIN_ID" ]]; then
+    osascript -e 'display notification "Built-in display not found" with title "Screen Switcher"'
+    exit 1
+fi
+
+if [[ -z "$EXTERNAL_ID" ]]; then
+    osascript -e 'display notification "External display not found — connect a display first" with title "Screen Switcher"'
+    exit 1
+fi
+
+if [[ -z "$BUILTIN_MODE" || -z "$EXTERNAL_MODE" ]]; then
+    osascript -e 'display notification "Could not detect current display modes" with title "Screen Switcher"'
+    exit 1
+fi
+
+# --- Detect current mirror configuration ---
+CURRENT_CMD=$(echo "$DP_OUTPUT" | tail -1)
+
+if [[ "$CURRENT_CMD" =~ id:([A-Fa-f0-9-]+)\+([A-Fa-f0-9-]+) ]]; then
+    FIRST_ID="${BASH_REMATCH[1]}"
+else
+    osascript -e 'display notification "Displays are not mirrored — enable mirroring first" with title "Screen Switcher"'
+    exit 1
+fi
+
+# --- Swap the "Optimize for" target ---
+# The first screen ID in a mirror set is the "Optimize for" display.
+# We use mode: syntax (display's own mode number) for reliability,
+# as res: with scaling:off fails for the built-in display.
+if [[ "$FIRST_ID" == "$EXTERNAL_ID" ]]; then
+    "$DP" "id:${BUILTIN_ID}+${EXTERNAL_ID} mode:${BUILTIN_MODE} origin:(0,0) degree:0"
+    osascript -e 'display notification "Now optimized for: Built-in Display" with title "Screen Switcher"'
+else
+    "$DP" "id:${EXTERNAL_ID}+${BUILTIN_ID} mode:${EXTERNAL_MODE} origin:(0,0) degree:0"
+    osascript -e 'display notification "Now optimized for: External Display" with title "Screen Switcher"'
+fi

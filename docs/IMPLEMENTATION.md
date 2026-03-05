@@ -25,8 +25,16 @@
   - Changed default `BUILTIN_MATCH` from `built-in` to `built.in` (regex) — displayplacer reports "built in" (no hyphen)
 
 ## Step 4: Wrap as .app bundle
-- **Status:** NOT STARTED
-- **Evidence:** —
+- **Status:** COMPLETE
+- **Evidence:** Created `ScreenSwitcher.app/` bundle with:
+  - `Contents/Info.plist` — CFBundleExecutable, LSUIElement (no Dock icon bounce), bundle ID
+  - `Contents/MacOS/toggle-display` — self-contained script (not dependent on `toggle-display.sh`)
+  - `Contents/Resources/` — placeholder for future icon
+- Tests:
+  1. Direct execution: `./ScreenSwitcher.app/Contents/MacOS/toggle-display` toggles correctly
+  2. `open ScreenSwitcher.app` toggles correctly (simulates Dock click)
+  3. Round-trip via `open`: external→built-in→external all work
+- **Note:** App is unsigned. First launch requires right-click > Open or `xattr -d com.apple.quarantine ScreenSwitcher.app`.
 
 ## Step 5: Add macOS notification
 - **Status:** COMPLETE (integrated into Step 3)
