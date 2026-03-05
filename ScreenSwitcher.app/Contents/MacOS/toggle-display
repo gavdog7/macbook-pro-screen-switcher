@@ -82,10 +82,24 @@ fi
 # The first screen ID in a mirror set is the "Optimize for" display.
 # We use mode: syntax (display's own mode number) for reliability,
 # as res: with scaling:off fails for the built-in display.
+RESOURCES_DIR="$BUNDLE_DIR/Contents/Resources"
+
 if [[ "$FIRST_ID" == "$EXTERNAL_ID" ]]; then
     "$DP" "id:${BUILTIN_ID}+${EXTERNAL_ID} mode:${BUILTIN_MODE} origin:(0,0) degree:0"
+    # Update Dock icon to show macbook
+    if [[ -f "$RESOURCES_DIR/icon-macbook.icns" ]]; then
+        cp "$RESOURCES_DIR/icon-macbook.icns" "$RESOURCES_DIR/AppIcon.icns"
+        touch "$BUNDLE_DIR"
+        killall Dock 2>/dev/null
+    fi
     osascript -e 'display notification "Now optimized for: Built-in Display" with title "Screen Switcher"'
 else
     "$DP" "id:${EXTERNAL_ID}+${BUILTIN_ID} mode:${EXTERNAL_MODE} origin:(0,0) degree:0"
+    # Update Dock icon to show monitor
+    if [[ -f "$RESOURCES_DIR/icon-monitor.icns" ]]; then
+        cp "$RESOURCES_DIR/icon-monitor.icns" "$RESOURCES_DIR/AppIcon.icns"
+        touch "$BUNDLE_DIR"
+        killall Dock 2>/dev/null
+    fi
     osascript -e 'display notification "Now optimized for: External Display" with title "Screen Switcher"'
 fi
