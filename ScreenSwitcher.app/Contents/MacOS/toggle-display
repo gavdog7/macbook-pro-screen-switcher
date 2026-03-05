@@ -86,16 +86,48 @@ RESOURCES_DIR="$BUNDLE_DIR/Contents/Resources"
 
 update_dock_icon() {
     local icon_src="$1"
+    local dock_plist="$HOME/Library/Preferences/com.apple.dock.plist"
+    local app_url="file://${BUNDLE_DIR}/"
+
+    # A. Set the icon via multiple mechanisms
     cp "$icon_src" "$RESOURCES_DIR/AppIcon.icns"
-    sync
-    # Use NSWorkspace to set the icon via extended attributes (more reliable than file swap alone)
     osascript -l JavaScript -e "
         ObjC.import('AppKit');
         var img = \$.NSImage.alloc.initWithContentsOfFile('${icon_src}');
         \$.NSWorkspace.sharedWorkspace.setIconForFileOptions(img, '${BUNDLE_DIR}', 0);
     " 2>/dev/null
-    touch "$BUNDLE_DIR"
-    touch "$BUNDLE_DIR/Contents/Info.plist"
+    touch "$BUNDLE_DIR" "$BUNDLE_DIR/Contents/Info.plist"
+
+    # B. Re-register with LaunchServices
+    /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -f "$BUNDLE_DIR" 2>/dev/null
+
+    # C. Delete and re-create the Dock entry at the same position
+    #    This is the key step — forces the Dock to discard its cached bookmark
+    #    and do a fresh icon lookup when it restarts.
+    local count i found_index=-1
+    count=$(/usr/libexec/PlistBuddy -c "Print persistent-apps" "$dock_plist" 2>/dev/null | grep -c "^    Dict") || count=0
+    for (( i=0; i<count; i++ )); do
+        local url
+        url=$(/usr/libexec/PlistBuddy -c "Print persistent-apps:${i}:tile-data:file-data:_CFURLString" "$dock_plist" 2>/dev/null)
+        if [[ "$url" == "$app_url" ]]; then
+            found_index=$i
+            break
+        fi
+    done
+
+    if [[ $found_index -ge 0 ]]; then
+        /usr/libexec/PlistBuddy -c "Delete persistent-apps:${found_index}" "$dock_plist" 2>/dev/null
+        /usr/libexec/PlistBuddy \
+            -c "Add persistent-apps:${found_index} dict" \
+            -c "Add persistent-apps:${found_index}:tile-type string file-tile" \
+            -c "Add persistent-apps:${found_index}:tile-data dict" \
+            -c "Add persistent-apps:${found_index}:tile-data:file-data dict" \
+            -c "Add persistent-apps:${found_index}:tile-data:file-data:_CFURLString string ${app_url}" \
+            -c "Add persistent-apps:${found_index}:tile-data:file-data:_CFURLStringType integer 15" \
+            "$dock_plist" 2>/dev/null
+    fi
+
+    # D. Restart Dock (reads fresh plist, does fresh icon lookup)
     killall Dock 2>/dev/null
 }
 
