@@ -84,22 +84,30 @@ fi
 # as res: with scaling:off fails for the built-in display.
 RESOURCES_DIR="$BUNDLE_DIR/Contents/Resources"
 
+update_dock_icon() {
+    local icon_src="$1"
+    cp "$icon_src" "$RESOURCES_DIR/AppIcon.icns"
+    # Flush macOS icon caches so the Dock picks up the new icon
+    touch "$BUNDLE_DIR"
+    touch "$BUNDLE_DIR/Contents/Info.plist"
+    /usr/bin/find "$BUNDLE_DIR" -name 'Icon?' -delete 2>/dev/null
+    rm -rf /var/folders/*/*/com.apple.dock.iconcache 2>/dev/null
+    rm -rf /var/folders/*/*/com.apple.iconservices 2>/dev/null
+    killall Dock 2>/dev/null
+}
+
 if [[ "$FIRST_ID" == "$EXTERNAL_ID" ]]; then
     "$DP" "id:${BUILTIN_ID}+${EXTERNAL_ID} mode:${BUILTIN_MODE} origin:(0,0) degree:0"
-    # Icon reflects current state: now on built-in → show macbook icon
+    # Model A: icon = current state. Now on built-in → show macbook
     if [[ -f "$RESOURCES_DIR/icon-macbook.icns" ]]; then
-        cp "$RESOURCES_DIR/icon-macbook.icns" "$RESOURCES_DIR/AppIcon.icns"
-        touch "$BUNDLE_DIR"
-        killall Dock 2>/dev/null
+        update_dock_icon "$RESOURCES_DIR/icon-macbook.icns"
     fi
     osascript -e 'display notification "Now optimized for: Built-in Display" with title "Screen Switcher"'
 else
     "$DP" "id:${EXTERNAL_ID}+${BUILTIN_ID} mode:${EXTERNAL_MODE} origin:(0,0) degree:0"
-    # Icon reflects current state: now on external → show monitor icon
+    # Model A: icon = current state. Now on external → show monitor
     if [[ -f "$RESOURCES_DIR/icon-monitor.icns" ]]; then
-        cp "$RESOURCES_DIR/icon-monitor.icns" "$RESOURCES_DIR/AppIcon.icns"
-        touch "$BUNDLE_DIR"
-        killall Dock 2>/dev/null
+        update_dock_icon "$RESOURCES_DIR/icon-monitor.icns"
     fi
     osascript -e 'display notification "Now optimized for: External Display" with title "Screen Switcher"'
 fi
