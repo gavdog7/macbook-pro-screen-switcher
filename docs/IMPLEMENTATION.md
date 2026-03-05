@@ -14,13 +14,20 @@
 - **Key finding:** Swapping the "optimize for" target also changes the available resolution set — the "optimize for" display drives the resolution options for the mirror set.
 
 ## Step 3: Create toggle-display.sh script
-- **Status:** NOT STARTED
-- **Evidence:** —
+- **Status:** COMPLETE
+- **Evidence:** Script created at `toggle-display.sh`. Tests:
+  1. Toggle external→built-in: built-in became first in mirror set (confirmed via `displayplacer list`)
+  2. Toggle built-in→external: external became first, restored 3840x2160 @100Hz
+  3. Round-trip: both directions work cleanly with exit 0
+  4. Error handling: `EXTERNAL_DISPLAY="nonexistent-display"` → exits 1 with notification
+- **Bugs fixed during development:**
+  - Removed `set -e` — `grep -qi` non-match exits non-zero, killing the script
+  - Changed default `BUILTIN_MATCH` from `built-in` to `built.in` (regex) — displayplacer reports "built in" (no hyphen)
 
 ## Step 4: Wrap as .app bundle
 - **Status:** NOT STARTED
 - **Evidence:** —
 
 ## Step 5: Add macOS notification
-- **Status:** NOT STARTED
-- **Evidence:** —
+- **Status:** COMPLETE (integrated into Step 3)
+- **Evidence:** Notifications are built into the toggle script via `osascript -e 'display notification ...'`. Shows "Now optimized for: Built-in Display" or "Now optimized for: External Display" on success, and descriptive error messages on failure.
