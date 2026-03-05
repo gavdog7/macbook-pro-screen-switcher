@@ -87,12 +87,15 @@ RESOURCES_DIR="$BUNDLE_DIR/Contents/Resources"
 update_dock_icon() {
     local icon_src="$1"
     cp "$icon_src" "$RESOURCES_DIR/AppIcon.icns"
-    # Flush macOS icon caches so the Dock picks up the new icon
+    sync
+    # Use NSWorkspace to set the icon via extended attributes (more reliable than file swap alone)
+    osascript -l JavaScript -e "
+        ObjC.import('AppKit');
+        var img = \$.NSImage.alloc.initWithContentsOfFile('${icon_src}');
+        \$.NSWorkspace.sharedWorkspace.setIconForFileOptions(img, '${BUNDLE_DIR}', 0);
+    " 2>/dev/null
     touch "$BUNDLE_DIR"
     touch "$BUNDLE_DIR/Contents/Info.plist"
-    /usr/bin/find "$BUNDLE_DIR" -name 'Icon?' -delete 2>/dev/null
-    rm -rf /var/folders/*/*/com.apple.dock.iconcache 2>/dev/null
-    rm -rf /var/folders/*/*/com.apple.iconservices 2>/dev/null
     killall Dock 2>/dev/null
 }
 
