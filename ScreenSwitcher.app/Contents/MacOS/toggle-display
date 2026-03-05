@@ -86,7 +86,7 @@ RESOURCES_DIR="$BUNDLE_DIR/Contents/Resources"
 
 if [[ "$FIRST_ID" == "$EXTERNAL_ID" ]]; then
     "$DP" "id:${BUILTIN_ID}+${EXTERNAL_ID} mode:${BUILTIN_MODE} origin:(0,0) degree:0"
-    # Update Dock icon to show macbook
+    # Icon reflects current state: now on built-in → show macbook icon
     if [[ -f "$RESOURCES_DIR/icon-macbook.icns" ]]; then
         cp "$RESOURCES_DIR/icon-macbook.icns" "$RESOURCES_DIR/AppIcon.icns"
         touch "$BUNDLE_DIR"
@@ -95,7 +95,7 @@ if [[ "$FIRST_ID" == "$EXTERNAL_ID" ]]; then
     osascript -e 'display notification "Now optimized for: Built-in Display" with title "Screen Switcher"'
 else
     "$DP" "id:${EXTERNAL_ID}+${BUILTIN_ID} mode:${EXTERNAL_MODE} origin:(0,0) degree:0"
-    # Update Dock icon to show monitor
+    # Icon reflects current state: now on external → show monitor icon
     if [[ -f "$RESOURCES_DIR/icon-monitor.icns" ]]; then
         cp "$RESOURCES_DIR/icon-monitor.icns" "$RESOURCES_DIR/AppIcon.icns"
         touch "$BUNDLE_DIR"
