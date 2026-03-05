@@ -27,9 +27,9 @@
 ## Step 4: Wrap as .app bundle
 - **Status:** COMPLETE
 - **Evidence:** Created `ScreenSwitcher.app/` bundle with:
-  - `Contents/Info.plist` — CFBundleExecutable, LSUIElement (no Dock icon bounce), bundle ID
+  - `Contents/Info.plist` — CFBundleExecutable, LSUIElement (no Dock icon bounce), bundle ID, CFBundleIconFile
   - `Contents/MacOS/toggle-display` — self-contained script (not dependent on `toggle-display.sh`)
-  - `Contents/Resources/` — placeholder for future icon
+  - `Contents/Resources/` — icon-macbook.icns, icon-monitor.icns, AppIcon.icns
 - Tests:
   1. Direct execution: `./ScreenSwitcher.app/Contents/MacOS/toggle-display` toggles correctly
   2. `open ScreenSwitcher.app` toggles correctly (simulates Dock click)
@@ -39,3 +39,9 @@
 ## Step 5: Add macOS notification
 - **Status:** COMPLETE (integrated into Step 3)
 - **Evidence:** Notifications are built into the toggle script via `osascript -e 'display notification ...'`. Shows "Now optimized for: Built-in Display" or "Now optimized for: External Display" on success, and descriptive error messages on failure.
+
+## Step 6: Dynamic Dock icon
+- **Status:** COMPLETE
+- **Evidence:** Dock icon changes to reflect the currently active display (Model A — status indicator). User-provided images processed: watermarks removed, backgrounds made transparent, converted to .icns with all required sizes.
+- **Icon behaviour:** LG TV icon when optimized for LG TV, MacBook icon when optimized for MacBook.
+- **Critical issue resolved:** macOS Dock icon caching. See `docs/DOCK-ICON-CACHING.md` for full details.
